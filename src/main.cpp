@@ -10,6 +10,7 @@ int main() {
 
     // ingest CSV data
     compass.ParseCSV("data/edges.csv", "data/classes.csv");
+    // parse into an adjacency list and the classes dictionary
 
     // the below is example code for parsing commandline input
     int no_of_lines;
@@ -22,4 +23,6 @@ int main() {
         // parse your commands however you see fit
         compass.ParseCommand(command);
     }
+
+
 }

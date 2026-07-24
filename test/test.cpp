@@ -3,41 +3,133 @@
 
 // change if you choose to use a different header name
 #include "CampusCompass.h"
+#include "CampusCompass.h"
+#include "Student.h"
 
 using namespace std;
 
 // the syntax for defining a test is below. It is important for the name to be
 // unique, but you can group multiple tests with [tags]. A test can have
 // [multiple][tags] using that syntax.
-TEST_CASE("Example Test Name - Change me!", "[tag]") {
-  // instantiate any class members that you need to test here
-  int one = 1;
 
-  // anything that evaluates to false in a REQUIRE block will result in a
-  // failing test
-  REQUIRE(one == 0); // fix me!
+TEST_CASE("Student helper functions", "[student][helper]") {
+  Student testStudent("Allie Gator", 12);
+  testStudent.addClass("COP3502");
 
-  // all REQUIRE blocks must evaluate to true for the whole test to pass
-  REQUIRE(false); // also fix me!
+  REQUIRE(testStudent.hasClass("COP3502"));
+  REQUIRE(!testStudent.hasClass("ENC1101"));
+
+  testStudent.addClass("ENC1101");
+  REQUIRE(testStudent.hasClass("ENC1101"));
+
+  REQUIRE(!testStudent.dropClass("doesn't exist"));
+  REQUIRE(testStudent.dropClass("ENC1101"));
+  REQUIRE(!testStudent.hasClass("ENC1101"));
+  REQUIRE(testStudent.getNumClasses()==1);
+
+  testStudent.addClass("PHY2048");
+
+  REQUIRE(testStudent.getNumClasses()==2);
+  REQUIRE(!testStudent.replaceClass("ENC1102", "MAC2312"));
+  REQUIRE(!testStudent.replaceClass("COP3502", "PHY2048"));
+  REQUIRE(testStudent.replaceClass("PHY2048", "ENC1102"));
+
+  REQUIRE(testStudent.hasClass("ENC1102"));
+  REQUIRE(testStudent.getNumClasses() == 2);
 }
 
-TEST_CASE("Test 2", "[tag]") {
-  // you can also use "sections" to share setup code between tests, for example:
-  int one = 1;
+TEST_CASE("Compass helper functions involving student/classes", "[compass][helper]") {
+  CampusCompass compass;
+  compass.ParseCSV("data/edges.csv", "data/classes.csv");
+  REQUIRE(!compass.studentExists("0"));
+  vector<string> classesTest = {"COP3503"};
+  vector<string> multipleClasses = {"COT3100", "PHY2048"};
+  REQUIRE(compass.insert("Albert", "0", 5, classesTest));
+  REQUIRE(compass.studentExists("0"));
 
-  SECTION("num is 2") {
-    int num = one + 1;
-    REQUIRE(num == 2);
-  };
+  SECTION("Has class") {
+    REQUIRE(compass.studentHasClass("0", "COP3503"));
+    REQUIRE(!compass.studentHasClass("0", "ENC1101"));
+    REQUIRE(!compass.studentHasClass("1", "COP3503"));
+  }
 
-  SECTION("num is 3") {
-    int num = one + 2;
-    REQUIRE(num == 3);
-  };
+  SECTION("Drop class") {
+    REQUIRE(!compass.dropClass("0", "ABC1234"));
+    REQUIRE(!compass.dropClass("50", "ABX1234"));
+    REQUIRE(compass.dropClass("0", "COP3503"));
+    REQUIRE(!compass.studentExists("0"));
 
-  // each section runs the setup code independently to ensure that they don't
-  // affect each other
+    REQUIRE(compass.insert("Albert's twin", "1", 5, multipleClasses));
+    REQUIRE(compass.dropClass("1", "COT3100"));
+    REQUIRE(compass.studentExists("1"));
+  }
+
+  SECTION("Insert") {
+    REQUIRE(!compass.insert("Albert's twin", "0", 5, classesTest));
+    REQUIRE(compass.insert("Albert's twin", "1", 5, multipleClasses));
+  }
+
+  SECTION("Remove") {
+    REQUIRE(!compass.remove("123456"));
+    REQUIRE(compass.remove("0"));
+    REQUIRE(!compass.remove("0"));
+    REQUIRE(!compass.studentExists("0"));
+  }
+
+  SECTION("Replace class") {
+    REQUIRE(!compass.replaceClass("123", "ENC1101", "ENC1102"));
+    REQUIRE(!compass.replaceClass("0", "ABC1001", "ENC1101"));
+    REQUIRE(!compass.replaceClass("0", "COP3503", "ENC1111"));
+    REQUIRE(compass.replaceClass("0", "COP3503", "COP3502"));
+  }
 }
+
+TEST_CASE("Compass helper functions involving edges", "[compass][helper]") {
+  CampusCompass compass;
+  compass.ParseCSV("data/edges.csv", "data/classes.csv");
+
+  SECTION("Check edge status + toggle") {
+    REQUIRE(compass.getEdgeStatus(1, 20) == "DNE");
+    REQUIRE(compass.getEdgeStatus(1, 50) == "open");
+    REQUIRE(compass.getEdgeStatus(50, 1) == "open");
+
+    compass.toggleEdgesClosure(1,50);
+    REQUIRE(compass.getEdgeStatus(1,50) == "closed");
+    REQUIRE(compass.getEdgeStatus(50,1) == "closed");
+
+    compass.toggleEdgesClosure(50, 1);
+    REQUIRE(compass.getEdgeStatus(1,50)=="open");
+  }
+}
+
+
+TEST_CASE("Parser", "[parse]") {
+  // test cases for in/valid UFID
+  // test cases for in/valid names
+  // test cases for in/valid class codes
+  // test cases for in/valid # of course codes
+  // test cases for misspelled commands
+  // test cases for successful overall commands
+  REQUIRE(true); // also fix me!
+}
+
+// TEST_CASE("Test 2", "[tag]") {
+//   // you can also use "sections" to share setup code between tests, for example:
+//   int one = 1;
+//
+//   SECTION("num is 2") {
+//     int num = one + 1;
+//     REQUIRE(num == 2);
+//   };
+//
+//   SECTION("num is 3") {
+//     int num = one + 2;
+//     REQUIRE(num == 3);
+//   };
+//
+//   // each section runs the setup code independently to ensure that they don't
+//   // affect each other
+// }
 
 // Refer to Canvas for a list of required tests. 
 // We encourage you to write more than required to ensure proper functionality, but only the ones on Canvas will be graded.
@@ -46,39 +138,39 @@ TEST_CASE("Test 2", "[tag]") {
 // Note that while this works, I recommend also creating plenty of unit tests for particular functions within your code.
 // This pattern should only be used for final, end-to-end testing.
 
-// This uses C++ "raw strings" and assumes your CampusCompass outputs a string with
-//   the same thing you print.
-TEST_CASE("Example CampusCompass Output Test", "[flag]") {
-  // the following is a "raw string" - you can write the exact input (without
-  //   any indentation!) and it should work as expected
-  // this is based on the input and output of the first public test case
-  string input = R"(6
-insert "Student A" 10000001 1 1 COP3502
-insert "Student B" 10000002 1 1 COP3502
-insert "Student C" 10000003 1 2 COP3502 MAC2311
-dropClass 10000001 COP3502
-remove 10000001
-removeClass COP3502
-)";
-
-  string expectedOutput = R"(successful
-successful
-successful
-successful
-unsuccessful
-2
-)";
-
-  string actualOutput;
-
-  // somehow pass your input into your CampusCompass and parse it to call the
-  // correct functions, for example:
-  /*
-  CampusCompass c;
-  c.parseInput(input)
-  // this would be some function that sends the output from your class into a string for use in testing
-  actualOutput = c.getStringRepresentation()
-  */
-
-  REQUIRE(actualOutput == expectedOutput);
-}
+// // This uses C++ "raw strings" and assumes your CampusCompass outputs a string with
+// //   the same thing you print.
+// TEST_CASE("Example CampusCompass Output Test", "[flag]") {
+//   // the following is a "raw string" - you can write the exact input (without
+//   //   any indentation!) and it should work as expected
+//   // this is based on the input and output of the first public test case
+//   string input = R"(6
+// insert "Student A" 10000001 1 1 COP3502
+// insert "Student B" 10000002 1 1 COP3502
+// insert "Student C" 10000003 1 2 COP3502 MAC2311
+// dropClass 10000001 COP3502
+// remove 10000001
+// removeClass COP3502
+// )";
+//
+//   string expectedOutput = R"(successful
+// successful
+// successful
+// successful
+// unsuccessful
+// 2
+// )";
+//
+//   string actualOutput;
+//
+//   // somehow pass your input into your CampusCompass and parse it to call the
+//   // correct functions, for example:
+//   /*
+//   CampusCompass c;
+//   c.parseInput(input)
+//   // this would be some function that sends the output from your class into a string for use in testing
+//   actualOutput = c.getStringRepresentation()
+//   */
+//
+//   REQUIRE(actualOutput == expectedOutput);
+// }
