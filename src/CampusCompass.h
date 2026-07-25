@@ -10,6 +10,7 @@ using namespace std;
 class CampusCompass {
 private:
     Graph graph;
+    set<int> nodes; // stores every single node in the graph
 
     unordered_map<string, Student> students;
     // student id is the key
@@ -20,6 +21,9 @@ private:
     unordered_map<string, pair<string, string>> classTimes;
     // course code -> pair(start, end)
 
+    unordered_map<int, int> dijkstras(int source);
+
+    // maybe need to keep track of how many diff nodes........
 public:
     // Think about what helper functions you will need in the algorithm
     CampusCompass(); // constructor
@@ -42,7 +46,9 @@ public:
     string getEdgeStatus(int location1, int location2);
 
     bool isConnected(int location1, int location2);
+    void printShortestEdges(string studentID);
 
     // for debugging
     void printClasses();
+    void printDijkstras(int source);
 };

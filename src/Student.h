@@ -15,6 +15,9 @@ public:
 
     bool hasClass(string classcode);
     int getNumClasses();
+    string getName();
+    int getResID();
+    unordered_set<string>& getClasses();
 
     void addClass(string classcode);
     bool dropClass(string classcode);

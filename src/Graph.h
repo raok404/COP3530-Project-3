@@ -2,6 +2,7 @@
 #define PROJECT3_GRAPH_H
 
 #include <unordered_map>
+#include <map>
 #include <set>
 #include "Student.h"
 #include <iostream>
@@ -44,6 +45,9 @@ public:
     bool edgeExists(int from, int to);
 
     string getEdgeStatus(int from, int to);
+
+    bool isConnected(int source, int dest);
+
 };
 
 

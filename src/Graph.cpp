@@ -3,6 +3,8 @@
 //
 
 #include "Graph.h"
+#include <queue>
+#include <unordered_set>
 
 Graph::Graph() {
 }
@@ -63,3 +65,46 @@ string Graph::getEdgeStatus(int from, int to) {
 
     return "DNE";
 }
+
+bool Graph::isConnected(int source, int dest) {
+    // bfs ->
+    queue<int> q;
+    unordered_set<int> visited;
+
+    q.push(source);
+    visited.insert(source);
+
+    while (!q.empty()) {
+        // add and visit neighbors of the next node if they haven't been visited yet
+        int currNode = q.front();
+        q.pop();
+
+        set<EdgeTo*> neighbors = getEdges(currNode);
+        for (EdgeTo* neighbor : neighbors) {
+            if (neighbor->open) {
+                if (visited.count(neighbor->id) > 0) {
+                    continue;
+                }
+
+                if (neighbor->id == dest) {
+                    return true;
+                }
+                q.push(neighbor->id);
+                visited.insert(neighbor->id);
+            }
+        }
+    }
+
+    return false;
+}
+
+// map<int, int> Graph::getShortestEdges(string studentID) {
+//     priority_queue<int> pq;
+//     map<int, pair<int, int>> info;
+//     // previously visited
+//     // initialize all the dist to infinity (except source)
+//     // initialize all the prev to -1
+//     // get the first thing in pq and relax the neighbors, updating the prev and dist as needed
+//     // do that while pq not empty
+//     // return a map of the class name and dist.
+// }

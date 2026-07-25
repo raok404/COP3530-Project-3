@@ -12,6 +12,18 @@ int Student::getNumClasses() {
     return classes.size();
 }
 
+string Student::getName() {
+    return name;
+}
+
+unordered_set<string> &Student::getClasses() {
+    return classes;
+}
+
+int Student::getResID() {
+    return residenceID;
+}
+
 void Student::addClass(string classcode) {
     classes.insert(classcode);
 }
