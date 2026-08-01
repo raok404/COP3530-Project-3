@@ -89,9 +89,6 @@ bool CampusCompass::ParseClasses(const string &classes_filepath) {
 }
 
 bool CampusCompass::ParseCommand(const string &command) {
-    // do whatever regex you need to parse validity
-    bool is_valid = true; // replace with your actual validity checking
-
     istringstream stream(command);
     string first;
     stream >> first;
@@ -108,30 +105,31 @@ bool CampusCompass::ParseCommand(const string &command) {
     else if (first == "replaceClass") {
         return parseReplaceClass(stream);
     }
+    else if (first == "removeClass") {
+        return parseRemoveClass(stream);
+    }
     else if (first == "toggleEdgesClosure") {
-
+        return parseToggleEdgesClosure(stream);
     }
     else if (first == "checkEdgeStatus") {
-        //
+        return parseCheckEdgeStatus(stream);
     }
     else if (first == "isConnected") {
-        //
+        return parseIsConnected(stream);
     }
     else if (first == "printShortestEdges") {
-        //
+        return parsePrintShortestEdges(stream);
     }
     else if (first == "printStudentZone") {
-        //
+        return parsePrintStudentZone(stream);
     }
     else if (first == "verifySchedule") {
-        //
+        return parseVerifySchedule(stream);
     }
     else {
         cout << "unsuccessful" << endl; // whatever an invalid command should do
         return false;
     }
-
-    return is_valid;
 }
 
 bool CampusCompass::parseInsert(istringstream& stream) {
@@ -167,13 +165,13 @@ bool CampusCompass::parseInsert(istringstream& stream) {
             // more classes than expected
             return false;
         }
-        cout << " aobut to insert " << endl;
-        return insert(name, studentID, resID, classes);
+        if (insert(name, studentID, resID, classes)) {
+            cout << "successful" << endl;
+            return true;
+        }
     }
-    else {
-        cout << " invalid match " << endl;
-        return false;
-    }
+    cout << "unsuccessful" << endl;
+    return false;
 }
 
 bool CampusCompass::parseRemove(istringstream &stream) {
@@ -224,21 +222,140 @@ bool CampusCompass::parseReplaceClass(istringstream &stream) {
     return false;
 }
 
+bool CampusCompass::parseRemoveClass(istringstream &stream) {
+    string command = stream.str();
+    regex pattern("removeClass ([A-Z]{3}[0-9]{4})");
+    smatch matches;
+    if (regex_search(command, matches, pattern)) {
+        string coursecode = matches[1];
+        int result = removeClass(coursecode);
+        if (result > 0) {
+            cout << result << endl;
+            return true;
+        }
+    }
+    cout << "unsuccessful" << endl;
+    return false;
+}
 
-// test all the stuff below - goal for tmmr ;.;
+bool CampusCompass::parseToggleEdgesClosure(istringstream &stream) {
+    string command = stream.str();
+    regex pattern("toggleEdgesClosure ([0-9]+)(( ([0-9]+) ([0-9]+))+)");
+    smatch matches;
+    if (regex_search(command, matches, pattern)) {
+        int numEdges = stoi(matches[1]);
+        string edgesString = matches[2];
+
+        istringstream edgesStream(edgesString);
+        for (int i = 0; i < numEdges; i++) {
+            // now extract edge
+            string node1;
+            if ((edgesStream >> ws).eof()) {
+                return false;
+            }
+            edgesStream >> node1;
+
+            string node2;
+            if ((edgesStream >> ws).eof()) {
+                return false;
+            }
+            edgesStream >> node2;
+
+            toggleEdgesClosure(stoi(node1), stoi(node2));
+        }
+
+        if (!(edgesStream >> ws).eof()) {
+            // more edges than expected
+            return false;
+        }
+
+        cout << "successful" << endl;
+        return true;
+    }
+    cout << "unsuccessful" << endl;
+    return false;
+}
+
+bool CampusCompass::parseCheckEdgeStatus(istringstream &stream) {
+    string command = stream.str();
+    regex pattern("checkEdgeStatus ([0-9]+) ([0-9]+)");
+    smatch matches;
+    if (regex_search(command, matches, pattern)) {
+        int location1 = stoi(matches[1]);
+        int location2 = stoi(matches[2]);
+        cout << getEdgeStatus(location1, location2) << endl;
+        return true;
+    }
+    cout << "unsuccessful" << endl;
+    return false;
+}
+
+bool CampusCompass::parseIsConnected(istringstream &stream) {
+    string command = stream.str();
+    regex pattern("isConnected ([0-9]+) ([0-9]+)");
+    smatch matches;
+    if (regex_search(command, matches, pattern)) {
+        int location1 = stoi(matches[1]);
+        int location2 = stoi(matches[2]);
+        if (isConnected(location1, location2)) {
+            cout << "successful" << endl;
+            return true;
+        }
+    }
+    cout << "unsuccessful" << endl;
+    return false;
+}
+
+bool CampusCompass::parsePrintShortestEdges(istringstream &stream) {
+    string command = stream.str();
+    regex pattern("printShortestEdges ([0-9]{8})");
+    smatch matches;
+    if (regex_search(command, matches, pattern)) {
+        string studentID = matches[1];
+        printShortestEdges(studentID);
+        return true;
+    }
+    return false;
+}
+
+bool CampusCompass::parsePrintStudentZone(istringstream &stream) {
+    string command = stream.str();
+    regex pattern("printStudentZone ([0-9]{8})");
+    smatch matches;
+    if (regex_search(command, matches, pattern)) {
+        string studentID = matches[1];
+        printStudentZone(studentID);
+        return true;
+    }
+    return false;
+}
+
+bool CampusCompass::parseVerifySchedule(istringstream &stream) {
+    string command = stream.str();
+    regex pattern("verifySchedule ([0-9]{8})");
+    smatch matches;
+    if (regex_search(command, matches, pattern)) {
+        string studentID = matches[1];
+        verifySchedule(studentID);
+        return true;
+    }
+    return false;
+}
+
+
 bool CampusCompass::studentExists(string studentID) {
     return students.find(studentID) != students.end();
 }
 
 bool CampusCompass::studentHasClass(string studentID, string courseCode) {
     if (studentExists(studentID)) {
-        return students[studentID].hasClass(courseCode);
+        return students[studentID]->hasClass(courseCode);
     }
     return false;
 }
 
 void CampusCompass::dropStudentIfNoClass(string studentID) {
-    if (students[studentID].getNumClasses()==0) {
+    if (students[studentID]->getNumClasses()==0) {
         students.erase(studentID);
     }
 }
@@ -257,9 +374,9 @@ bool CampusCompass::insert(string name, string studentID, int resID, vector<stri
     if (studentExists(studentID)) {
         return false;
     }
-    students[studentID] = Student(name, resID);
+    students[studentID] = new Student(name, resID);
     for (string code : classes) {
-        students[studentID].addClass(code);
+        students[studentID]->addClass(code);
     }
 
     return true;
@@ -278,7 +395,7 @@ bool CampusCompass::dropClass(string studentID, string course) {
         return false;
     }
 
-    bool result = students[studentID].dropClass(course);
+    bool result = students[studentID]->dropClass(course);
     dropStudentIfNoClass(studentID);
     return result;
 }
@@ -291,7 +408,7 @@ bool CampusCompass::replaceClass(string studentID, string course1, string course
     if (classLocations.count(course2) == 0) {
         return false;
     }
-    return students[studentID].replaceClass(course1, course2);
+    return students[studentID]->replaceClass(course1, course2);
 }
 
 int CampusCompass::removeClass(string classcode) {
@@ -299,11 +416,11 @@ int CampusCompass::removeClass(string classcode) {
         return 0;
     }
     int removalCount = 0;
-    for (auto studentInfo : students) {
-        Student currStudent = studentInfo.second;
-        if (currStudent.hasClass(classcode)) {
+    for (pair<string, Student*> studentInfo : students) {
+        Student* currStudent = studentInfo.second;
+        if (currStudent->hasClass(classcode)) {
             removalCount++;
-            currStudent.dropClass(classcode);
+            currStudent->dropClass(classcode);
 
         dropStudentIfNoClass(studentInfo.first);
         }
@@ -326,12 +443,12 @@ bool CampusCompass::isConnected(int location1, int location2) {
 }
 
 void CampusCompass::printShortestEdges(string studentID) {
-    cout << "Time for Shortest Edges: " << students[studentID].getName() << endl;
+    cout << "Time for Shortest Edges: " << students[studentID]->getName() << endl;
     // need to look up the classes from the map?????????
-    unordered_map<int, int> results = dijkstras(students[studentID].getResID())[0];
+    unordered_map<int, int> results = dijkstras(students[studentID]->getResID())[0];
 
     set<string> classes;
-    for (auto course : students[studentID].getClasses()) {
+    for (auto course : students[studentID]->getClasses()) {
         classes.insert(course); // sorts them
     }
 
@@ -340,10 +457,29 @@ void CampusCompass::printShortestEdges(string studentID) {
     }
 }
 
-int CampusCompass::printStudentZone(string studentID) {
-    unordered_map<int, int> predecessors = dijkstras(students[studentID].getResID())[1];
+bool CampusCompass::allClassesReachable(string studentID) {
+    bool allOpen = true;
+    cout << "Time for Shortest Edges: " << students[studentID]->getName() << endl;
+    // need to look up the classes from the map?????????
+    unordered_map<int, int> results = dijkstras(students[studentID]->getResID())[0];
 
-    unordered_set<string> studentClassCodes = students[studentID].getClasses();
+    set<string> classes;
+    for (auto course : students[studentID]->getClasses()) {
+        classes.insert(course); // sorts them
+    }
+
+    for (auto course : classes) {
+       if (results[classLocations[course]] == INT_MAX) {
+           allOpen = false;
+       }
+    }
+    return allOpen;
+}
+
+void CampusCompass::printStudentZone(string studentID) {
+    unordered_map<int, int> predecessors = dijkstras(students[studentID]->getResID())[1];
+
+    unordered_set<string> studentClassCodes = students[studentID]->getClasses();
     vector<int> classLocationIDs;
     for (string classCode : studentClassCodes) {
         classLocationIDs.push_back(classLocations[classCode]);
@@ -357,7 +493,8 @@ int CampusCompass::printStudentZone(string studentID) {
     // cout << endl;
 
     Graph subgraph = getSubGraph(nodesForSubgraph);
-    return mst(subgraph, students[studentID].getResID());
+    int result = mst(subgraph, students[studentID]->getResID());
+    cout << "Student Zone Cost For " << students[studentID]->getName() << ": " << result << endl;
 }
 
 int timeToInt(string time) {
@@ -396,12 +533,12 @@ void CampusCompass::verifySchedule(string studentID) {
     // do dijkstras to find distance b/w class1 + class2
     // and class2 + class3
 
-    if (students[studentID].getNumClasses() == 1) {
+    if (students[studentID]->getNumClasses() == 1) {
         cout << "unsuccessful" << endl;
     }
 
     vector<course> classes; // stores { locationID, classStartInt, classEndInt }
-    for (auto classCode : students[studentID].getClasses()) {
+    for (auto classCode : students[studentID]->getClasses()) {
         classes.push_back(course(classLocations[classCode],classCode, timeToInt(classTimes[classCode].first), timeToInt(classTimes[classCode].second)));
     }
     sort(classes.begin(), classes.end()); // sorts them by class start time
@@ -528,7 +665,7 @@ int CampusCompass::mst(Graph &subgraph, int resID) {
 
     int nodeToProcess = resID;
 
-    while (unconnected.size()>0) {
+    while (unconnected.size()>1) {
         unconnected.erase(nodeToProcess);
         connected.insert(nodeToProcess);
 
@@ -566,5 +703,11 @@ void CampusCompass::printDijkstras(int source) {
     for (auto dist : distances) {
         cout << "Node #" << dist.first << ": distance " << (dist.second == INT_MAX ? -1 : dist.second);
         cout << " prev: " << predecessors[dist.first] << endl;
+    }
+}
+
+CampusCompass::~CampusCompass() {
+    for (auto pair : students) {
+        delete pair.second;
     }
 }

@@ -12,7 +12,7 @@ private:
     Graph graph;
     set<int> nodes; // stores every single node in the graph
 
-    unordered_map<string, Student> students;
+    unordered_map<string, Student*> students;
     // student id is the key
 
     unordered_map<string, int> classLocations;
@@ -33,6 +33,13 @@ private:
     bool parseRemove(istringstream& stream);
     bool parseDropClass(istringstream& stream);
     bool parseReplaceClass(istringstream& stream);
+    bool parseRemoveClass(istringstream& stream);
+    bool parseToggleEdgesClosure(istringstream& stream);
+    bool parseCheckEdgeStatus(istringstream& stream);
+    bool parseIsConnected(istringstream& stream);
+    bool parsePrintShortestEdges(istringstream& stream);
+    bool parsePrintStudentZone(istringstream& stream);
+    bool parseVerifySchedule(istringstream& stream);
 
 public:
     // Think about what helper functions you will need in the algorithm
@@ -57,10 +64,13 @@ public:
 
     bool isConnected(int location1, int location2);
     void printShortestEdges(string studentID);
-    int printStudentZone(string studentID);
+    bool allClassesReachable(string studentID); // for testing
+    void printStudentZone(string studentID);
     void verifySchedule(string studentID);
 
     // for debugging
     void printClasses();
     void printDijkstras(int source);
+
+    ~CampusCompass();
 };

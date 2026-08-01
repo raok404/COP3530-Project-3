@@ -7,10 +7,63 @@
 
 using namespace std;
 
-// the syntax for defining a test is below. It is important for the name to be
-// unique, but you can group multiple tests with [tags]. A test can have
-// [multiple][tags] using that syntax.
+// 5 graded test cases
+TEST_CASE("Graded Test Cases", "[parse][edgeCases]") {
+  CampusCompass compass;
+  compass.ParseCSV("data/edges.csv", "data/classes.csv");
 
+  SECTION("5 INVALID commands") {
+    vector<string> invalid;
+    invalid.push_back(R"(insert John Smith 10012002 1 3 COP3503 PHY2049 CDA3101)"); // wrong format
+    invalid.push_back(R"(insert "Hello 123!" 10012002 1 3 COP3503 PHY2049 CDA3101)"); // invalid name
+    invalid.push_back(R"(insert "John Smith" 100 1 0 COP3503 PHY2049 CDA3101)"); // invalid id
+    invalid.push_back(R"(insert "John Smith" 10012002 1 3 PHY2049 CDA3101)"); // wrong number of classes
+    invalid.push_back(R"(dropClass 12345678 CA3101)"); // invalid course code
+    for (auto command : invalid) {
+      REQUIRE(!compass.ParseCommand(command));
+    }
+  }
+
+  SECTION("3 edge cases") {
+    vector<string> classes = {"COP3530"};
+    compass.insert("John Doe", "00000000", 1, classes);
+
+    vector<string> edgeCases;
+    edgeCases.push_back(R"(remove 87654321)"); // removing student that doesn't exist
+    edgeCases.push_back(R"(dropClass 00000000 CDA3101)"); // drop class they don't have
+    edgeCases.push_back(R"(removeClass ZZZ0000)"); // remove class that doesn't exist
+    for (auto command : edgeCases) {
+      REQUIRE(!compass.ParseCommand(command));
+    }
+  }
+
+  SECTION("dropClass, removeClass, remove, replaceClass") {
+    vector<string> classes = {"COP3530", "PHY2048", "CDA3101", "COT3100"};
+    compass.insert("John Doe", "00000000", 1, classes);
+    vector<string> classes2 = {"COP3530", "CDA3101", "MAC2311"};
+    compass.insert("Ali May", "00000001", 55, classes2);
+
+    REQUIRE(compass.dropClass("00000000", "CDA3101"));
+    REQUIRE(compass.removeClass("CDA3101") == 1);
+    REQUIRE(compass.replaceClass("00000000", "PHY2048", "PHY2049"));
+    REQUIRE(!compass.dropClass("00000000", "PHY2048")); // no longer has the class
+    REQUIRE(!compass.replaceClass("00000001", "MAC2312", "COP3530")); // can't replace class don't have
+    REQUIRE(compass.remove("00000000"));
+    // I wrote many more test cases for these down in the campus compass helper functions test case
+  }
+
+  SECTION("printShortestEdges where they can reach class, turn off edges, then cannot reach that class") {
+    vector<string> classes = {"COP3530", "PHY2048", "CDA3101", "COT3100"};
+    compass.insert("John Doe", "00000000", 1, classes);
+
+    REQUIRE(compass.allClassesReachable("00000000")); // same as printShortestEdges but returns a bool
+    compass.toggleEdgesClosure(15, 6); // close an important edge
+    REQUIRE(!compass.allClassesReachable("00000000")); // should not be reachable now
+  }
+}
+
+
+// my own test cases below
 TEST_CASE("Parsing insert", "[parse][insert]") {
   CampusCompass compass;
   compass.ParseCSV("data/edges.csv", "data/classes.csv");
@@ -93,7 +146,76 @@ TEST_CASE("Parsing replaceClass", "[parse][replaceClass]") {
   REQUIRE(!compass.ParseCommand(R"(replaceClass 12345678 CDA3101)"));
   REQUIRE(!compass.ParseCommand(R"(replaceClass 1245678 CDA3101 ENC1101)"));
   REQUIRE(!compass.ParseCommand(R"(replaceClass 12345678 CDA3101 EN1101)"));
+}
 
+TEST_CASE("Parsing removeClass", "[parse][removeClass]") {
+  CampusCompass compass;
+  compass.ParseCSV("data/edges.csv", "data/classes.csv");
+  vector<string> classes = {"MAC2311", "PHY2048", "CDA3101"};
+
+  compass.insert("Amanda", "12345678", 55, classes);
+  REQUIRE(compass.ParseCommand(R"(removeClass PHY2048)"));
+  REQUIRE(!compass.ParseCommand(R"(removeClass PHY048)"));
+  REQUIRE(!compass.ParseCommand(R"(removeClass 11111111 PHY2048)"));
+  REQUIRE(!compass.ParseCommand(R"(removeClass PHY2048 COP3530)"));
+  REQUIRE(!compass.ParseCommand(R"(removeClass ABC0000)"));
+}
+
+TEST_CASE("Parsing toggleEdgesClosure", "[parse][toggle]") {
+  CampusCompass compass;
+  compass.ParseCSV("data/edges.csv", "data/classes.csv");
+  vector<string> classes = {"MAC2313", "MAC2311", "COP3502"};
+  compass.insert("harvey", "123", 1,  classes);
+
+  REQUIRE(!compass.ParseCommand(R"(toggleEdgesClosure a 15 6)"));
+  REQUIRE(!compass.ParseCommand(R"(toggleEdgesClosure 3 1 2 3 4)"));
+  REQUIRE(!compass.ParseCommand(R"(toggleEdgesClosure 1 1 2 3 4)"));
+  REQUIRE(compass.ParseCommand(R"(toggleEdgesClosure 2 1 2 3 4)"));
+  REQUIRE(compass.ParseCommand(R"(toggleEdgesClosure 2 1 2 3 4)"));
+  REQUIRE(compass.ParseCommand(R"(toggleEdgesClosure 1 15 6)"));
+  REQUIRE(!compass.isConnected(1, 18));
+  REQUIRE(compass.ParseCommand(R"(toggleEdgesClosure 1 15 6)"));
+  REQUIRE(compass.isConnected(1, 18));
+}
+
+TEST_CASE("Parsing functions", "[parse]") {
+  CampusCompass compass;
+  compass.ParseCSV("data/edges.csv", "data/classes.csv");
+  vector<string> classes = {"MAC2311", "PHY2048", "CDA3101"};
+  compass.insert("harvey", "12345678", 1,  classes);
+
+  SECTION("check edge status") {
+    REQUIRE(compass.ParseCommand(R"(checkEdgeStatus 1 18)"));
+    REQUIRE(!compass.ParseCommand(R"(checkEdgeStatus 18)"));
+  }
+
+  SECTION("check is connected") {
+    REQUIRE(compass.ParseCommand(R"(isConnected 1 18)"));
+    REQUIRE(!compass.ParseCommand(R"(isConnected 18)"));
+    compass.toggleEdgesClosure(6,15);
+    REQUIRE(!compass.ParseCommand(R"(isConnected 1 18)"));
+  }
+
+  SECTION("print shortest edges") {
+    REQUIRE(!compass.ParseCommand(R"(printShortestEdges)"));
+    REQUIRE(!compass.ParseCommand(R"(printShortestEdges 123)"));
+    REQUIRE(!compass.ParseCommand(R"(printShortestEdges 123aaaaa)"));
+    REQUIRE(compass.ParseCommand(R"(printShortestEdges 12345678)"));
+  }
+
+  SECTION("print student zone") {
+    REQUIRE(!compass.ParseCommand(R"(printStudentZone)"));
+    REQUIRE(!compass.ParseCommand(R"(printStudentZone 123)"));
+    REQUIRE(!compass.ParseCommand(R"(printStudentZone 123aaaaa)"));
+    REQUIRE(compass.ParseCommand(R"(printStudentZone 12345678)"));
+  }
+
+  SECTION("verify schedule") {
+    REQUIRE(!compass.ParseCommand(R"(verifySchedule)"));
+    REQUIRE(!compass.ParseCommand(R"(verifySchedule 123)"));
+    REQUIRE(!compass.ParseCommand(R"(verifySchedule 123aaaaa)"));
+    REQUIRE(compass.ParseCommand(R"(verifySchedule 12345678)"));
+  }
 }
 
 TEST_CASE("Student helper functions", "[student][helper]") {
@@ -148,6 +270,19 @@ TEST_CASE("Compass helper functions involving student/classes", "[compass][helpe
     REQUIRE(compass.studentExists("1"));
   }
 
+  SECTION("Remove class") {
+    REQUIRE(compass.removeClass("COP3530") == 0);
+    compass.insert("ALBERT", "12345678", 55, multipleClasses);
+    REQUIRE(compass.removeClass("COP3503") == 1);
+    REQUIRE(compass.removeClass("ABC123") == 0);
+    vector<string> test = {"EEL2701", "COT3100"};
+    REQUIRE(compass.insert("Ali", "12345675", 12, test));
+    REQUIRE(compass.removeClass("COT3100") == 2);
+    REQUIRE(compass.removeClass("COT3100") == 0);
+    compass.insert("Lila", "123", 12, test);
+    REQUIRE(compass.removeClass("COT3100")==1);
+  }
+
   SECTION("Insert") {
     REQUIRE(!compass.insert("Albert's twin", "0", 5, classesTest));
     REQUIRE(compass.insert("Albert's twin", "1", 5, multipleClasses));
@@ -196,85 +331,4 @@ TEST_CASE("Compass isConnected", "[compass][algorithm]") {
   REQUIRE(compass.isConnected(10,14));
   REQUIRE(compass.isConnected(10, 43));
   REQUIRE(!compass.isConnected(45, 48));
-  // ADD TESTS FOR WHEN YOU TOGGLE SOME EDGES
 }
-
-TEST_CASE("Compass printShortestEdges", "[compass][algorithm]") {
-  CampusCompass compass;
-  compass.ParseCSV("data/edges.csv", "data/classes.csv");
-  // add tests
-  REQUIRE(false);
-}
-
-
-TEST_CASE("Parser", "[parse]") {
-  // test cases for in/valid UFID
-  // test cases for in/valid names
-  // test cases for in/valid class codes
-  // test cases for in/valid # of course codes
-  // test cases for misspelled commands
-  // test cases for successful overall commands
-  REQUIRE(true); // also fix me!
-}
-
-// TEST_CASE("Test 2", "[tag]") {
-//   // you can also use "sections" to share setup code between tests, for example:
-//   int one = 1;
-//
-//   SECTION("num is 2") {
-//     int num = one + 1;
-//     REQUIRE(num == 2);
-//   };
-//
-//   SECTION("num is 3") {
-//     int num = one + 2;
-//     REQUIRE(num == 3);
-//   };
-//
-//   // each section runs the setup code independently to ensure that they don't
-//   // affect each other
-// }
-
-// Refer to Canvas for a list of required tests. 
-// We encourage you to write more than required to ensure proper functionality, but only the ones on Canvas will be graded.
-
-// See the following for an example of how to easily test your output.
-// Note that while this works, I recommend also creating plenty of unit tests for particular functions within your code.
-// This pattern should only be used for final, end-to-end testing.
-
-// // This uses C++ "raw strings" and assumes your CampusCompass outputs a string with
-// //   the same thing you print.
-// TEST_CASE("Example CampusCompass Output Test", "[flag]") {
-//   // the following is a "raw string" - you can write the exact input (without
-//   //   any indentation!) and it should work as expected
-//   // this is based on the input and output of the first public test case
-//   string input = R"(6
-// insert "Student A" 10000001 1 1 COP3502
-// insert "Student B" 10000002 1 1 COP3502
-// insert "Student C" 10000003 1 2 COP3502 MAC2311
-// dropClass 10000001 COP3502
-// remove 10000001
-// removeClass COP3502
-// )";
-//
-//   string expectedOutput = R"(successful
-// successful
-// successful
-// successful
-// unsuccessful
-// 2
-// )";
-//
-//   string actualOutput;
-//
-//   // somehow pass your input into your CampusCompass and parse it to call the
-//   // correct functions, for example:
-//   /*
-//   CampusCompass c;
-//   c.parseInput(input)
-//   // this would be some function that sends the output from your class into a string for use in testing
-//   actualOutput = c.getStringRepresentation()
-//   */
-//
-//   REQUIRE(actualOutput == expectedOutput);
-// }
