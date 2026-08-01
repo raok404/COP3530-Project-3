@@ -8,6 +8,7 @@
 #include <vector>
 #include <unordered_map>
 #include <queue>
+#include <algorithm>
 
 using namespace std;
 
@@ -198,7 +199,7 @@ bool CampusCompass::isConnected(int location1, int location2) {
 void CampusCompass::printShortestEdges(string studentID) {
     cout << "Time for Shortest Edges: " << students[studentID].getName() << endl;
     // need to look up the classes from the map?????????
-    unordered_map<int, int> results = dijkstras(students[studentID].getResID());
+    unordered_map<int, int> results = dijkstras(students[studentID].getResID())[0];
 
     set<string> classes;
     for (auto course : students[studentID].getClasses()) {
@@ -210,13 +211,96 @@ void CampusCompass::printShortestEdges(string studentID) {
     }
 }
 
+int CampusCompass::printStudentZone(string studentID) {
+    unordered_map<int, int> predecessors = dijkstras(students[studentID].getResID())[1];
+
+    unordered_set<string> studentClassCodes = students[studentID].getClasses();
+    vector<int> classLocationIDs;
+    for (string classCode : studentClassCodes) {
+        classLocationIDs.push_back(classLocations[classCode]);
+    }
+
+    unordered_set<int> nodesForSubgraph = getNodesFromDijkstras(predecessors, classLocationIDs);
+    // // debugging printing
+    // for (auto i : nodesForSubgraph) {
+    //     cout << i << " ";
+    // }
+    // cout << endl;
+
+    Graph subgraph = getSubGraph(nodesForSubgraph);
+    return mst(subgraph, students[studentID].getResID());
+}
+
+int timeToInt(string time) {
+    int minutes = 0;
+    minutes += (time.back() - '0');
+    time.pop_back();
+
+    minutes += ((time.back() - '0') * 10);
+    time.pop_back();
+
+    time.pop_back(); // ":"
+
+    minutes += ((time.back() - '0') * 60);
+    time.pop_back();
+
+    minutes += ((time.back() - '0') * 600);
+
+    return minutes;
+}
+
+
+struct course {
+    int classLocation;
+    string classCode;
+    int startTime;
+    int endTime;
+
+    course(int clsLoc, string clsC, int sT, int eT) : classLocation(clsLoc), classCode(clsC), startTime(sT), endTime(eT) {}
+
+    bool operator<(const course& other) const {
+        return startTime < other.startTime;
+    }
+};
+
+void CampusCompass::verifySchedule(string studentID) {
+    // do dijkstras to find distance b/w class1 + class2
+    // and class2 + class3
+
+    if (students[studentID].getNumClasses() == 1) {
+        cout << "unsuccessful" << endl;
+    }
+
+    vector<course> classes; // stores { locationID, classStartInt, classEndInt }
+    for (auto classCode : students[studentID].getClasses()) {
+        classes.push_back(course(classLocations[classCode],classCode, timeToInt(classTimes[classCode].first), timeToInt(classTimes[classCode].second)));
+    }
+    sort(classes.begin(), classes.end()); // sorts them by class start time
+
+    // now use dijkstras
+    for (size_t i = 0; i < classes.size()-1; i++) {
+        course& currClass = classes[i];
+        course& nextClass = classes[i+1];
+
+        cout << currClass.classCode << " - " << nextClass.classCode << ": ";
+
+        unordered_map<int, int> distances = dijkstras(currClass.classLocation)[0];
+        if (distances[nextClass.classLocation] <= nextClass.startTime - currClass.endTime) {
+            cout << "successful" << endl;
+        }
+        else {
+            cout << "unsuccessful" << endl;
+        }
+    }
+}
+
 struct ComparePair {
     bool operator()(const pair<int, int>& pair1, const pair<int, int>& pair2) {
         return pair1.second > pair2.second;
     }
 };
 
-unordered_map<int, int> CampusCompass::dijkstras(int source) {
+vector<unordered_map<int, int>> CampusCompass::dijkstras(int source) {
     priority_queue<pair<int, int>, vector<pair<int, int>>, ComparePair> pq;
     // put in a pair<locationID, distance>
 
@@ -245,16 +329,16 @@ unordered_map<int, int> CampusCompass::dijkstras(int source) {
         }
 
         // relax the neighbors of current node
-        set<EdgeTo*> neighbors = graph.getEdges(id);
-        for (EdgeTo* edge : neighbors) {
+        set<Edge*> neighbors = graph.getEdges(id);
+        for (Edge* edge : neighbors) {
             if (!edge->open) {
                 continue;
             }
-            if (currDist + edge->weight < distance[edge->id]) {
-                distance[edge->id] = currDist + edge->weight;
-                predecessor[edge->id] = id;
+            if (currDist + edge->weight < distance[edge->to]) {
+                distance[edge->to] = currDist + edge->weight;
+                predecessor[edge->to] = id;
 
-                pq.emplace(make_pair(edge->id, distance[edge->id]));
+                pq.emplace(make_pair(edge->to, distance[edge->to]));
             }
         }
 
@@ -263,12 +347,95 @@ unordered_map<int, int> CampusCompass::dijkstras(int source) {
         processed.insert(source);
     }
 
-    return distance;
+    return {distance, predecessor};
+}
+
+unordered_set<int> CampusCompass::getNodesFromDijkstras(unordered_map<int, int> &predecessors, vector<int> classNodes) {
+    unordered_set<int> nodesInPaths;
+    for (int classLocationID : classNodes) {
+        nodesInPaths.insert(classLocationID);
+
+        int prev = predecessors[classLocationID];
+        while (prev != -1) {
+            nodesInPaths.insert(prev);
+            prev = predecessors[prev];
+        }
+    }
+
+    return nodesInPaths;
+}
+
+Graph CampusCompass::getSubGraph(unordered_set<int> &locations) {
+    // iterate through the adj list and add all edges in those adj lists
+    Graph subgraph;
+
+    for (int location : locations) {
+        for (Edge* edge : graph.getEdges(location)) {
+            if (edge->open && locations.count(edge->to) != 0) {
+                subgraph.addEdge(location, edge->to, edge->weight);
+            }
+        }
+    }
+
+    return subgraph;
+}
+
+struct CompareEdgePtr {
+    // functor to correctly order edges in the priority queue
+    bool operator()(const Edge* edge1, const Edge* edge2) const {
+        return edge1->weight > edge2->weight;
+    }
+};
+
+int CampusCompass::mst(Graph &subgraph, int resID) {
+    // have a connected and unconnected set
+    // at first, connected will be empty and unconnected will not have all the graph nodes
+    int sum = 0;
+
+    unordered_set<int> connected;
+    unordered_set<int> unconnected = subgraph.getAllNodeInts();
+
+    priority_queue<Edge*, vector<Edge*>, CompareEdgePtr> pq;
+
+    int nodeToProcess = resID;
+
+    while (unconnected.size()>0) {
+        unconnected.erase(nodeToProcess);
+        connected.insert(nodeToProcess);
+
+        // add all outbound edges from all connected nodes to a priority queue
+        for (Edge* edge : subgraph.getEdges(nodeToProcess)) {
+            if (unconnected.count(edge->to) != 0) {
+                // the outbound edge connects to a node in the unconnected part of the graph
+                pq.push(edge);
+            }
+        }
+        if (pq.size() == 0) {
+            break;
+        }
+        // after that, pop nodes that are connecting already connected nodes to clear them out
+        bool isBetweenConnected = connected.count(pq.top()->from) != 0 && connected.count(pq.top()->to) != 0;
+        while (isBetweenConnected) {
+            pq.pop();
+
+            isBetweenConnected = connected.count(pq.top()->from) != 0 && connected.count(pq.top()->to) != 0;
+        }
+        // now next lowest edge should be from connected to unconnected
+        sum += pq.top()->weight;
+        nodeToProcess = pq.top()->to;
+        pq.pop();
+    }
+
+    return sum;
 }
 
 void CampusCompass::printDijkstras(int source) {
-    unordered_map<int, int> results = dijkstras(source);
-    for (auto res : results) {
-        cout << "Node #" << res.first << ": distance " << (res.second == INT_MAX ? -1 : res.second) << endl;
+    vector<unordered_map<int, int>> result = dijkstras(source);
+    unordered_map<int, int> distances = result[0];
+    unordered_map<int, int> predecessors = result[1];
+
+    for (auto dist : distances) {
+        cout << "Node #" << dist.first << ": distance " << (dist.second == INT_MAX ? -1 : dist.second);
+        cout << " prev: " << predecessors[dist.first] << endl;
     }
 }

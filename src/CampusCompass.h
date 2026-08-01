@@ -21,9 +21,15 @@ private:
     unordered_map<string, pair<string, string>> classTimes;
     // course code -> pair(start, end)
 
-    unordered_map<int, int> dijkstras(int source);
+    vector<unordered_map<int, int>> dijkstras(int source);
 
-    // maybe need to keep track of how many diff nodes........
+    // need a function to return the prevNodes of dijkstras... map from the ids to the distance
+    // need to get a list of all the nodes that are in the shortest paths as ints
+    unordered_set<int> getNodesFromDijkstras(unordered_map<int, int>& predecessors, vector<int> classNodes);
+
+    Graph getSubGraph(unordered_set<int>& locations); // this will make the subgraph of all edges between these nodes
+    int mst(Graph& subgraph, int resID); // this will calculate the mst of the subgraph
+
 public:
     // Think about what helper functions you will need in the algorithm
     CampusCompass(); // constructor
@@ -47,6 +53,8 @@ public:
 
     bool isConnected(int location1, int location2);
     void printShortestEdges(string studentID);
+    int printStudentZone(string studentID);
+    void verifySchedule(string studentID);
 
     // for debugging
     void printClasses();

@@ -6,13 +6,24 @@
 #include <queue>
 #include <unordered_set>
 
+Graph::~Graph() {
+    for (auto pair : adjList) {
+        for (Edge* edge : pair.second) {
+            delete edge;
+        }
+    }
+}
+
 Graph::Graph() {
 }
 
 bool Graph::addEdge(int from, int to, int weight) {
     // adds an open edge
-    EdgeTo* newEdge = new EdgeTo(to, weight, true);
+    Edge* newEdge = new Edge(from, to, weight, true);
     adjList[from].insert(newEdge);
+
+    nodes.insert(from);
+    nodes.insert(to);
 
     return true;
 }
@@ -20,32 +31,32 @@ bool Graph::addEdge(int from, int to, int weight) {
 void Graph::printAdjList() {
     for (auto it = adjList.begin(); it != adjList.end(); it++) {
         int from = it->first;
-        set<EdgeTo*> edges = it->second;
+        set<Edge*> edges = it->second;
 
         cout << from << " goes to these locations:" << endl;
 
         for (auto edge : edges) {
-            cout << "\t" << edge->id << ", weight" << edge->weight << ", open:" << edge->open << endl;
+            cout << "\t" << edge->to << ", weight" << edge->weight << ", open:" << edge->open << endl;
         }
     }
 }
 
 void Graph::toggleEdge(int from, int to) {
-    set<EdgeTo*> edges = getEdges(from);
-    for (EdgeTo* edge : edges) {
-        if (edge->id == to) {
+    set<Edge*> edges = getEdges(from);
+    for (Edge* edge : edges) {
+        if (edge->to == to) {
             edge->toggle();
         }
     }
 }
 
-set<EdgeTo*> Graph::getEdges(int from) {
+set<Edge*> Graph::getEdges(int from) {
     return adjList[from];
 }
 
 bool Graph::edgeExists(int from, int to) {
-    for (EdgeTo* edge : getEdges(from)) {
-        if (edge->id == to) {
+    for (Edge* edge : getEdges(from)) {
+        if (edge->to == to) {
             return true;
         }
     }
@@ -54,8 +65,8 @@ bool Graph::edgeExists(int from, int to) {
 }
 
 string Graph::getEdgeStatus(int from, int to) {
-    for (EdgeTo* edge : getEdges(from)) {
-        if (edge->id == to) {
+    for (Edge* edge : getEdges(from)) {
+        if (edge->to == to) {
             if (edge->open) {
                 return "open";
             }
@@ -79,23 +90,27 @@ bool Graph::isConnected(int source, int dest) {
         int currNode = q.front();
         q.pop();
 
-        set<EdgeTo*> neighbors = getEdges(currNode);
-        for (EdgeTo* neighbor : neighbors) {
+        set<Edge*> neighbors = getEdges(currNode);
+        for (Edge* neighbor : neighbors) {
             if (neighbor->open) {
-                if (visited.count(neighbor->id) > 0) {
+                if (visited.count(neighbor->to) > 0) {
                     continue;
                 }
 
-                if (neighbor->id == dest) {
+                if (neighbor->to == dest) {
                     return true;
                 }
-                q.push(neighbor->id);
-                visited.insert(neighbor->id);
+                q.push(neighbor->to);
+                visited.insert(neighbor->to);
             }
         }
     }
 
     return false;
+}
+
+unordered_set<int> Graph::getAllNodeInts() {
+    return nodes;
 }
 
 // map<int, int> Graph::getShortestEdges(string studentID) {

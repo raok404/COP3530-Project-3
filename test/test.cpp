@@ -102,6 +102,26 @@ TEST_CASE("Compass helper functions involving edges", "[compass][helper]") {
   }
 }
 
+TEST_CASE("Compass isConnected", "[compass][algorithm]") {
+  CampusCompass compass;
+  compass.ParseCSV("data/edges.csv", "data/classes.csv");
+
+  REQUIRE(compass.isConnected(9, 53));
+  REQUIRE(!compass.isConnected(40, 9));
+  REQUIRE(!compass.isConnected(29, 52));
+  REQUIRE(compass.isConnected(10,14));
+  REQUIRE(compass.isConnected(10, 43));
+  REQUIRE(!compass.isConnected(45, 48));
+  // ADD TESTS FOR WHEN YOU TOGGLE SOME EDGES
+}
+
+TEST_CASE("Compass printShortestEdges", "[compass][algorithm]") {
+  CampusCompass compass;
+  compass.ParseCSV("data/edges.csv", "data/classes.csv");
+  // add tests
+  REQUIRE(false);
+}
+
 
 TEST_CASE("Parser", "[parse]") {
   // test cases for in/valid UFID
