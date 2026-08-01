@@ -37,6 +37,8 @@ TEST_CASE("Parsing insert", "[parse][insert]") {
     invalid.push_back(R"(insert "John Smith" 10012002 1 3 PHY2049 CDA3101)");
     invalid.push_back(R"(insert "John Smith" ABCD2002 1 2 PHY2049 CDA3101)");
     invalid.push_back(R"(insert "John Smith" 10012002 1 2 COP3503 PHY2049 CDA3101)");
+    invalid.push_back(R"(insert "John Smith" 10012002 1 3 COP3A03 PHY2049 CDA3101)");
+    invalid.push_back(R"(insert "John Smith" 10012002 1 3 CaP3503 PHY2049 CDA3101)");
 
     for (auto command : invalid) {
       REQUIRE(!compass.ParseCommand(command));
@@ -46,6 +48,52 @@ TEST_CASE("Parsing insert", "[parse][insert]") {
     REQUIRE(compass.ParseCommand(R"(insert "Amanda" 12345678 55 2 MAC2313 COP3530)"));
     REQUIRE(!compass.ParseCommand(R"(insert "Ama" 12345678 51 2 MAC2313 COP3530)"));
   }
+}
+
+TEST_CASE("Parsing remove", "[parse][remove]") {
+  CampusCompass compass;
+  compass.ParseCSV("data/edges.csv", "data/classes.csv");
+  vector<string> classes = {"MAC2311"};
+
+  compass.insert("Amanda", "12345678", 55, classes);
+
+  REQUIRE(compass.ParseCommand(R"(remove 12345678)"));
+  REQUIRE(!compass.ParseCommand(R"(remove 12345678)"));
+  REQUIRE(!compass.ParseCommand(R"(remove 1234)"));
+  REQUIRE(!compass.ParseCommand(R"(remove 1234abcd)"));
+}
+
+TEST_CASE("Parsing dropClass", "[parse][dropClass]") {
+  CampusCompass compass;
+  compass.ParseCSV("data/edges.csv", "data/classes.csv");
+  vector<string> classes = {"MAC2311", "PHY2048", "CDA3101"};
+
+  compass.insert("Amanda", "12345678", 55, classes);
+
+  REQUIRE(compass.ParseCommand(R"(dropClass 12345678 CDA3101)"));
+  REQUIRE(!compass.ParseCommand(R"(dropClass 12345678 CDA3101)"));
+  REQUIRE(!compass.ParseCommand(R"(dropClass 12345679 CDA3101)"));
+  REQUIRE(!compass.ParseCommand(R"(dropClass 1234)"));
+  REQUIRE(!compass.ParseCommand(R"(dropClass 12345678 CD3101)"));
+  REQUIRE(!compass.ParseCommand(R"(dropClass 12345678 CDa3101)"));
+  REQUIRE(!compass.ParseCommand(R"(dropClass 12345678 CDA3p01)"));
+}
+
+TEST_CASE("Parsing replaceClass", "[parse][replaceClass]") {
+  CampusCompass compass;
+  compass.ParseCSV("data/edges.csv", "data/classes.csv");
+  vector<string> classes = {"MAC2311", "PHY2048", "CDA3101"};
+
+  compass.insert("Amanda", "12345678", 55, classes);
+
+  REQUIRE(compass.ParseCommand(R"(replaceClass 12345678 CDA3101 ENC1101)"));
+  REQUIRE(!compass.studentHasClass("12345678", "CDA3101"));
+  REQUIRE(!compass.ParseCommand(R"(replaceClass 12345678 CDA3101 PHY2049)"));
+  REQUIRE(!compass.ParseCommand(R"(replaceClass 12345678 PHY2048 MAC2311)"));
+  REQUIRE(!compass.ParseCommand(R"(replaceClass 12345678 CDA3101)"));
+  REQUIRE(!compass.ParseCommand(R"(replaceClass 1245678 CDA3101 ENC1101)"));
+  REQUIRE(!compass.ParseCommand(R"(replaceClass 12345678 CDA3101 EN1101)"));
+
 }
 
 TEST_CASE("Student helper functions", "[student][helper]") {

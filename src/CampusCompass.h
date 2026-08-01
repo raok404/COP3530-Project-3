@@ -30,6 +30,9 @@ private:
 
     // helper functions to parse the commands
     bool parseInsert(istringstream& stream);
+    bool parseRemove(istringstream& stream);
+    bool parseDropClass(istringstream& stream);
+    bool parseReplaceClass(istringstream& stream);
 
 public:
     // Think about what helper functions you will need in the algorithm

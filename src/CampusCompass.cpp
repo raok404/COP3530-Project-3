@@ -1,7 +1,6 @@
 #include "CampusCompass.h"
 #include "Graph.h"
 #include "Student.h"
-#include "Parser.h"
 
 #include <string>
 #include <fstream>
@@ -98,21 +97,16 @@ bool CampusCompass::ParseCommand(const string &command) {
     stream >> first;
 
     if (first == "insert") {
-        if (parseInsert(stream)) {
-            cout << "successful" << endl;
-            return true;
-        }
-        cout << "unsuccessful" << endl;
-        return false;
+        return parseInsert(stream);
     }
     else if (first == "remove") {
-        //
+        return parseRemove(stream);
     }
     else if (first == "dropClass") {
-        //
+        return parseDropClass(stream);
     }
     else if (first == "replaceClass") {
-
+        return parseReplaceClass(stream);
     }
     else if (first == "toggleEdgesClosure") {
 
@@ -181,6 +175,55 @@ bool CampusCompass::parseInsert(istringstream& stream) {
         return false;
     }
 }
+
+bool CampusCompass::parseRemove(istringstream &stream) {
+    string command = stream.str();
+    regex pattern("remove ([0-9]{8})");
+    smatch matches;
+    if (regex_search(command, matches, pattern)) {
+        string studentID = matches[1];
+        if (remove(studentID)) {
+            cout << "successful" << endl;
+            return true;
+        }
+    }
+    cout << "unsuccessful" << endl;
+    return false;
+}
+
+bool CampusCompass::parseDropClass(istringstream &stream) {
+    string command = stream.str();
+    regex pattern("dropClass ([0-9]{8}) ([A-Z]{3}[0-9]{4})");
+    smatch matches;
+    if (regex_search(command, matches, pattern)) {
+        string studentID = matches[1];
+        string courseCode = matches[2];
+        if (dropClass(studentID, courseCode)) {
+            cout << "successful" << endl;
+            return true;
+        }
+    }
+    cout << "unsuccessful" << endl;
+    return false;
+}
+
+bool CampusCompass::parseReplaceClass(istringstream &stream) {
+    string command = stream.str();
+    regex pattern("replaceClass ([0-9]{8}) ([A-Z]{3}[0-9]{4}) ([A-Z]{3}[0-9]{4})");
+    smatch matches;
+    if (regex_search(command, matches, pattern)) {
+        string studentID = matches[1];
+        string courseCode1 = matches[2];
+        string courseCode2 = matches[3];
+        if (replaceClass(studentID, courseCode1, courseCode2)) {
+            cout << "successful" << endl;
+            return true;
+        }
+    }
+    cout << "unsuccessful" << endl;
+    return false;
+}
+
 
 // test all the stuff below - goal for tmmr ;.;
 bool CampusCompass::studentExists(string studentID) {
