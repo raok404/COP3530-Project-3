@@ -1,6 +1,7 @@
 #include "CampusCompass.h"
 #include "Graph.h"
 #include "Student.h"
+#include "Parser.h"
 
 #include <string>
 #include <fstream>
@@ -9,6 +10,7 @@
 #include <unordered_map>
 #include <queue>
 #include <algorithm>
+#include <regex>
 
 using namespace std;
 
@@ -89,12 +91,96 @@ bool CampusCompass::ParseClasses(const string &classes_filepath) {
 
 bool CampusCompass::ParseCommand(const string &command) {
     // do whatever regex you need to parse validity
-    // hint: return a boolean for validation when testing. For example:
     bool is_valid = true; // replace with your actual validity checking
+
+    istringstream stream(command);
+    string first;
+    stream >> first;
+
+    if (first == "insert") {
+        if (parseInsert(stream)) {
+            cout << "successful" << endl;
+            return true;
+        }
+        cout << "unsuccessful" << endl;
+        return false;
+    }
+    else if (first == "remove") {
+        //
+    }
+    else if (first == "dropClass") {
+        //
+    }
+    else if (first == "replaceClass") {
+
+    }
+    else if (first == "toggleEdgesClosure") {
+
+    }
+    else if (first == "checkEdgeStatus") {
+        //
+    }
+    else if (first == "isConnected") {
+        //
+    }
+    else if (first == "printShortestEdges") {
+        //
+    }
+    else if (first == "printStudentZone") {
+        //
+    }
+    else if (first == "verifySchedule") {
+        //
+    }
+    else {
+        cout << "unsuccessful" << endl; // whatever an invalid command should do
+        return false;
+    }
 
     return is_valid;
 }
 
+bool CampusCompass::parseInsert(istringstream& stream) {
+    string command = stream.str();
+    regex pattern("insert \"([A-Za-z ]*)\" ([0-9]{8}) ([0-9]+) ([1-6])( [A-Z]{3}[0-9]{4})+");
+    smatch matches;
+    if (regex_search(command, matches, pattern)) {
+        string name = matches[1];
+        string studentID = matches[2];
+        int resID = stoi(matches[3]);
+        int numClasses = stoi(matches[4]);
+
+        string temp;
+        getline(stream, temp, '"');
+        getline(stream, temp, '"'); // extract name;
+        stream >> temp; // extract studentid
+        stream >> temp; // extract resID
+        stream >> temp; // extract N
+
+        vector<string> classes;
+
+        for (int i = 0; i < numClasses; i++) {
+            // now extract class names
+            string courseCode;
+            if ((stream >> ws).eof()) {
+              return false;
+            }
+            stream >> courseCode;
+            classes.push_back(courseCode);
+        }
+
+        if (!(stream >> ws).eof()) {
+            // more classes than expected
+            return false;
+        }
+        cout << " aobut to insert " << endl;
+        return insert(name, studentID, resID, classes);
+    }
+    else {
+        cout << " invalid match " << endl;
+        return false;
+    }
+}
 
 // test all the stuff below - goal for tmmr ;.;
 bool CampusCompass::studentExists(string studentID) {

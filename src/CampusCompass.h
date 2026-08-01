@@ -23,12 +23,13 @@ private:
 
     vector<unordered_map<int, int>> dijkstras(int source);
 
-    // need a function to return the prevNodes of dijkstras... map from the ids to the distance
-    // need to get a list of all the nodes that are in the shortest paths as ints
     unordered_set<int> getNodesFromDijkstras(unordered_map<int, int>& predecessors, vector<int> classNodes);
 
     Graph getSubGraph(unordered_set<int>& locations); // this will make the subgraph of all edges between these nodes
     int mst(Graph& subgraph, int resID); // this will calculate the mst of the subgraph
+
+    // helper functions to parse the commands
+    bool parseInsert(istringstream& stream);
 
 public:
     // Think about what helper functions you will need in the algorithm

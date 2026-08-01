@@ -3,7 +3,6 @@
 
 // change if you choose to use a different header name
 #include "CampusCompass.h"
-#include "CampusCompass.h"
 #include "Student.h"
 
 using namespace std;
@@ -11,6 +10,43 @@ using namespace std;
 // the syntax for defining a test is below. It is important for the name to be
 // unique, but you can group multiple tests with [tags]. A test can have
 // [multiple][tags] using that syntax.
+
+TEST_CASE("Parsing insert", "[parse][insert]") {
+  CampusCompass compass;
+  compass.ParseCSV("data/edges.csv", "data/classes.csv");
+
+  SECTION("Valid commands") {
+    string valid0 = R"(insert "Amanda" 12345678 55 2 MAC2313 COP3530)";
+    string valid1 = R"(insert "Josh Smith" 10012002 1 3 COP3502 PHY2048 CDA3101)";
+    string valid2 = R"(insert "Jane Doe" 76543219 4 1 CDA3101)";
+    string valid3 = R"(insert "Alex B" 40205060 55 2 PHY2048 MAC2311)";
+    REQUIRE(compass.ParseCommand(valid0));
+    REQUIRE(compass.ParseCommand(valid1));
+    REQUIRE(compass.ParseCommand(valid2));
+    REQUIRE(compass.ParseCommand(valid3));
+  }
+
+  SECTION("INVALID commands") {
+    vector<string> invalid;
+    invalid.push_back(R"(insert John Smith 10012002 1 3 COP3503 PHY2049 CDA3101)");
+    invalid.push_back(R"(insert "John Sm123h" 10012002 1 3 COP3503 PHY2049 CDA3101)");
+    invalid.push_back(R"(insert "John Smith" 1001200 1 3 COP3503 PHY2049 CDA3101)");
+    invalid.push_back(R"(insert "John Smith" 10012002 3 COP3503 PHY2049 CDA3101)");
+    invalid.push_back(R"(insert "John Smith" 10012002 1 10 COP3503 PHY2049 CDA3101)");
+    invalid.push_back(R"(insert "John Smith" 10012002 1 0 COP3503 PHY2049 CDA3101)");
+    invalid.push_back(R"(insert "John Smith" 10012002 1 3 PHY2049 CDA3101)");
+    invalid.push_back(R"(insert "John Smith" ABCD2002 1 2 PHY2049 CDA3101)");
+    invalid.push_back(R"(insert "John Smith" 10012002 1 2 COP3503 PHY2049 CDA3101)");
+
+    for (auto command : invalid) {
+      REQUIRE(!compass.ParseCommand(command));
+    }
+
+    // also invalid if id is not unique
+    REQUIRE(compass.ParseCommand(R"(insert "Amanda" 12345678 55 2 MAC2313 COP3530)"));
+    REQUIRE(!compass.ParseCommand(R"(insert "Ama" 12345678 51 2 MAC2313 COP3530)"));
+  }
+}
 
 TEST_CASE("Student helper functions", "[student][helper]") {
   Student testStudent("Allie Gator", 12);
