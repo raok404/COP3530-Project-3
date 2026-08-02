@@ -374,9 +374,10 @@ bool CampusCompass::insert(string name, string studentID, int resID, vector<stri
     if (studentExists(studentID)) {
         return false;
     }
-    students[studentID] = new Student(name, resID);
+    Student* student = new Student(name, resID);
+    students[studentID] = student;
     for (string code : classes) {
-        students[studentID]->addClass(code);
+        student->addClass(code);
     }
 
     return true;
@@ -444,7 +445,6 @@ bool CampusCompass::isConnected(int location1, int location2) {
 
 void CampusCompass::printShortestEdges(string studentID) {
     cout << "Time for Shortest Edges: " << students[studentID]->getName() << endl;
-    // need to look up the classes from the map?????????
     unordered_map<int, int> results = dijkstras(students[studentID]->getResID())[0];
 
     set<string> classes;
@@ -486,11 +486,6 @@ void CampusCompass::printStudentZone(string studentID) {
     }
 
     unordered_set<int> nodesForSubgraph = getNodesFromDijkstras(predecessors, classLocationIDs);
-    // // debugging printing
-    // for (auto i : nodesForSubgraph) {
-    //     cout << i << " ";
-    // }
-    // cout << endl;
 
     Graph subgraph = getSubGraph(nodesForSubgraph);
     int result = mst(subgraph, students[studentID]->getResID());
